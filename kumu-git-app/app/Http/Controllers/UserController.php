@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\Pool;
 use App\User;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -37,14 +39,6 @@ class UserController extends Controller
 
     private function retrieveGithubRecords($user) {
 
-        // $responses = Http::pool(fn (Pool $pool) =>
-        // [
-        //     foreach ($users as $value) {
-        //         $pool->as('first')->get('http://localhost/first'),
-        //     } 
-
-        // ]);
-
         // $fn2 = function (\Illuminate\Http\Client\Pool $pool) use ($a) {
         //     foreach ($users as $value) {
         //         $arrayPools[] = $pool->get($aVal);
@@ -54,25 +48,41 @@ class UserController extends Controller
 
         // foreach ($users as $value) {
 
-        // $github_record = Http::withHeaders([
-        //     'Accept' => 'application/vnd.github.v3+json'
-        // ])->get($this->github_url . '/users' . '/' . $user->github_username);
-        
+        try {
 
-        $github_record = Http::withHeaders([
-            'Accept' => 'application/vnd.github.v3+json'
-        ])::pool(fn (Pool $pool) => [
-            $pool->get($this->github_url . '/users' . '/' . $user->github_username),
-        ]);
+            $cached_user = Redis::get($user->github_username);
+
+            if ($cached_user != null) {
+                Log::info('Data retrieved from cache. (' . $user->github_username . ')');
+                return json_decode($cached_user);
+            }
+
+        } catch (ModelNotFoundException $exception) {
+            Log::critical($exception->getMessage());
+            return back()->withError($exception->getMessage())->withInput();
+        }
 
 
-        if ($github_record[0]->status() == 404) {
+        try {
+            
+            $github_record = Http::withHeaders([
+                'Accept' => 'application/vnd.github.v3+json'
+            ])->get($this->github_url . '/users' . '/' . $user->github_username);
+
+        } catch (ModelNotFoundException $exception) {
+            Log::critical($exception->getMessage());
+            return back()->withError($exception->getMessage())->withInput();
+        }
+
+        if ($github_record->status() == 404) {
             $response = [
                 'message' => 'Github account not found'
             ];
+            Log::error($response);
         }
         else {
-            $response = $github_record[0]->json();
+            $response = $github_record->json();
+            Redis::set($user->github_username,json_encode($response));
         }
 
         return $response;
@@ -89,7 +99,33 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        return User::find($id);
+
+        try {
+
+            $user = DB::table('users')->where('id',$id)->first();
+
+            if($user) {
+                $github_user = $this->retrieveGithubRecords($user);
+                $user->github_data = $github_user;
+            }
+
+        } catch (ModelNotFoundException $ex) { 
+            abort(422, 'Invalid id: User not found');
+        } catch (Exception $ex) { 
+            abort(500, 'Something went wrong when fetching your data.');
+        }
+
+        $user_obj = [
+            'user' => $user,
+        ];
+
+        $response = [
+            'result' => $user_obj,
+            'status' => 'success',
+        ];
+
+        return response($response,201);
+
     }
 
     /**
@@ -112,6 +148,22 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        //
+
+        try {
+
+            $file = User::where('id', $id)->first(); // File::find($id)
+
+            if($file) {
+    
+                return $file->delete();
+            }
+
+        } catch (ModelNotFoundException $ex) { 
+            abort(422, 'Invalid id: User not found');
+        } catch (Exception $ex) { 
+            abort(500, 'Something went wrong when deleting your data.');
+        }
+
+
     }
 }
