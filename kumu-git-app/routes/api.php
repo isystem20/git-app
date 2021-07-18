@@ -21,7 +21,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::get('/users', [UserController::class,'index']);
     Route::get('/user/{id}', [UserController::class,'show']);
-
+    Route::delete('/user/{id}', [UserController::class,'destroy']);
 
     Route::post('/logout', [AuthController::class,'logout']);
+});
+
+Route::fallback(function(){
+    return response()->json([
+        'message' => 'Page Not Found. If error persists, contact info@kumu.ph'], 404);
 });
