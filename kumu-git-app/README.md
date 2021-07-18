@@ -27,6 +27,15 @@ GET /user/{id}
 POST /logout
 
 
+Additionals:
+
+I was trying to add concurrent requests to github api to improve its efficiency but I couldnt finish it within the given time. This is the first time I used laravel, I used to work on Code Igniter before but its really fun using laravel. Thanks for checking out this code!
+
+
+
+
+
+
 
 BONUS CHALLENGE:
 
