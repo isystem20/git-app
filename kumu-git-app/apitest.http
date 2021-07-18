@@ -1,0 +1,37 @@
+
+GET http://localhost:8000/api/users HTTP/1.1
+Accept: application/json
+Authorization: Bearer 5|57Bf9I8UyQwOew798qzWzT1I64nWw9CJXyMh8pia
+
+###
+
+POST http://localhost:8000/api/register HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name": "John Perry Carpio",
+    "email": "isystem21@gmail.com",
+    "github_username": "isystem21",
+    "password": "1234",
+    "password_confirmation": "1234"
+}
+
+###
+
+GET http://localhost:8000/api/user/4 HTTP/1.1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer 5|57Bf9I8UyQwOew798qzWzT1I64nWw9CJXyMh8pia
+
+
+###
+
+POST http://localhost:8000/api/login HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "isystem20@gmail.com",
+    "password": "1234"
+}
